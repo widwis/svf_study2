@@ -192,7 +192,7 @@ input[type="range"]::-webkit-slider-thumb {
 // ============================================================
 
 const CONFIG = {
-  PROLIFIC_URL: 'https://app.prolific.com/submissions/complete?cc=XXXXXXXX',
+  PROLIFIC_URL: 'https://app.prolific.com/submissions/complete?cc=COET3JP3',
   N_SCENARIOS: 12,
   BASE_PAY: 2.40,
 };
@@ -258,6 +258,13 @@ const S = {
 function getProlificPid() {
   const p = new URLSearchParams(window.location.search);
   return p.get('PROLIFIC_PID') || 'test_' + Math.random().toString(36).substr(2,8);
+}
+function getProlificMeta() {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    study_id: p.get('STUDY_ID') || '',
+    session_id: p.get('SESSION_ID') || '',
+  };
 }
 function shuffle(a) {
   for (let i = a.length-1; i > 0; i--) {
@@ -1175,7 +1182,7 @@ function showCompletion() {
         Complete &amp; Return to Prolific</button>
     </div>
     <p class="text-muted text-center" style="margin-top:12px;">
-      If the button doesn't work, use completion code: <strong>XXXXXXXX</strong></p>
+      If the button doesn't work, use completion code: <strong>COET3JP3</strong></p>
     <div class="text-center" style="margin-top:16px;">
       <button class="btn btn-secondary" onclick="downloadData()"
         style="font-size:0.8rem;padding:6px 16px;">Download Data (Testing)</button>
@@ -1188,10 +1195,13 @@ function showCompletion() {
 // DATA EXPORT
 // ============================================================
 function exportData() {
+  const meta = getProlificMeta();
   return {
     version: 'v5',
     submission_id: S.pid + '_' + Date.now(),
     pid: S.pid,
+    study_id: meta.study_id,
+    session_id: meta.session_id,
     condition: S.condition,
     scenario_order: S.order.map(i=>SCENARIOS[i].id),
     start_time: new Date(S.t0).toISOString(),
@@ -1211,7 +1221,7 @@ function exportData() {
   };
 }
 
-const DATA_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwQws4aSNz1G9VToMP4MjJ_Z_QGg8PIO7ef27VXweIa3T9oyV1iewjpKkS0Lw7YkOc25w/exec'; // Google Apps Script URL
+const DATA_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyaUYf2kTSI2quINc1Zmt284YtCzlfO0GQ4JsBulj4WySXCG5FuH-650_4qgEjQK8T4ZQ/exec'; // Google Apps Script URL
 let _submitted = false;
 
 async function submitData(data) {
