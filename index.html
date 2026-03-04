@@ -582,7 +582,8 @@ function submitP1() {
 // ----- CONTENT RECALL IMC -----
 function showContentRecall() {
   const s = sc(), n = S.idx+1;
-  // Generate 4 options: correct + 3 distractors
+  if (!S._imcAttempts) S._imcAttempts = 0;
+  // Generate 4 options: correct + 3 distractors (regenerate each time)
   const correct = s.my;
   const distractors = new Set();
   while (distractors.size < 3) {
@@ -591,10 +592,16 @@ function showContentRecall() {
   }
   const options = shuffle([correct, ...distractors]);
   S.cur._imcCorrect = correct;
+  S.cur._imcAnswer = undefined;
+
+  const warn = S._imcAttempts > 0
+    ? '<p style="color:var(--danger);font-weight:600;">Incorrect. Please try again. Think carefully about the return shown on the previous screen.</p>'
+    : '';
 
   render(`<div class="card">
     <div class="text-muted text-center" style="margin-bottom:12px;">Round ${n} of 12</div>
     <h3>Quick Check</h3>
+    ${warn}
     <p>What was <strong>your fund's return</strong> shown on the previous screen?</p>
     <div class="likert-wrap">
       ${options.map(o =>
@@ -618,21 +625,17 @@ function submitRecall() {
   if (S.cur._imcAnswer === undefined) {
     document.getElementById('recallErr').classList.add('visible'); return;
   }
-  S.imcPassed = (S.cur._imcAnswer === S.cur._imcCorrect);
-  S.cur.imc_correct = S.imcPassed;
-
-  if (!S.imcPassed) {
-    // Show warning but continue
-    render(`<div class="card">
-      <h3>Please pay closer attention</h3>
-      <p>Your answer did not match the return shown. Please read each scenario carefully
-      for the remainder of the study.</p>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="showPhase2()">Continue</button>
-      </div>
-    </div>`);
-  } else {
+  S._imcAttempts++;
+  if (S.cur._imcAnswer === S.cur._imcCorrect) {
+    // Correct
+    S.imcPassed = S._imcAttempts === 1; // true only if first try
+    S.imcAttempts = S._imcAttempts;
+    S.cur.imc_correct = true;
+    S.cur.imc_attempts = S._imcAttempts;
     showPhase2();
+  } else {
+    // Wrong — retry with reshuffled options
+    showContentRecall();
   }
 }
 
@@ -867,6 +870,13 @@ function submitP3() {
 // ============================================================
 function showMidBreak() {
   S.phase = 'midbreak';
+  if (!S._attnAttempts) S._attnAttempts = 0;
+  S.attn_check = undefined;
+
+  const warn = S._attnAttempts > 0
+    ? '<p style="color:var(--danger);font-weight:600;">Incorrect. Please read the instruction carefully and try again.</p>'
+    : '';
+
   render(`<div class="card">
     <h1 class="text-center">Halfway Complete!</h1>
     <p class="text-center">You've finished 6 of 12 rounds. Great work so far.</p>
@@ -874,6 +884,7 @@ function showMidBreak() {
 
     <hr class="divider">
 
+    ${warn}
     <div class="likert-wrap">
       <p class="likert-question">Attention check: In this study, you have been
       evaluating investment outcomes and answering questions about your reactions.
@@ -900,9 +911,16 @@ function pickAttn(el,v) {
 
 function submitMid() {
   if (!S.attn_check) { document.getElementById('midErr').classList.add('visible'); return; }
-  S.attn_passed = S.attn_check === 'sa';
-  S.phase = 'scenario';
-  showPhase1();
+  S._attnAttempts++;
+  if (S.attn_check === 'sa') {
+    S.attn_passed = S._attnAttempts === 1;
+    S.attn_attempts = S._attnAttempts;
+    S.phase = 'scenario';
+    showPhase1();
+  } else {
+    // Wrong — retry
+    showMidBreak();
+  }
 }
 
 // ============================================================
@@ -1192,6 +1210,7 @@ function showCompletion() {
 function exportData() {
   return {
     version: 'v5',
+    submission_id: S.pid + '_' + Date.now(),
     pid: S.pid,
     condition: S.condition,
     scenario_order: S.order.map(i=>SCENARIOS[i].id),
@@ -1202,8 +1221,10 @@ function exportData() {
     comp_attempts: S.compAttempts,
     attn_check: S.attn_check,
     attn_passed: S.attn_passed,
+    attn_attempts: S.attn_attempts || 1,
     imc_target_scenario: SCENARIOS[S.order[S.imcTarget]].id,
     imc_passed: S.imcPassed,
+    imc_attempts: S.imcAttempts || 1,
     responses: S.responses,
     battery: S.battery,
     demographics: S.demo,
@@ -1211,20 +1232,28 @@ function exportData() {
 }
 
 const DATA_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwmKdyePKX8aIgahzYgvT4E5S3OS3EiwA_tnhjm80G4IV7WFwVp03RCvfvnzGS61j9VPQ/exec'; // Google Apps Script URL
+let _submitted = false;
 
 async function submitData(data) {
   console.log('=== INVESTSIM v5 STUDY 2 DATA ===');
   console.log(JSON.stringify(data, null, 2));
-  if (!DATA_ENDPOINT) return;
+  if (!DATA_ENDPOINT || _submitted) return;
+  _submitted = true;
+  // Use sendBeacon for reliability (fires even if page is closing)
+  // Single method only to prevent duplicate submissions
   try {
-    await fetch(DATA_ENDPOINT, {
-      method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify(data),
-    });
+    const sent = navigator.sendBeacon(DATA_ENDPOINT,
+      new Blob([JSON.stringify(data)], {type:'text/plain'}));
+    if (!sent) {
+      // Fallback to fetch only if sendBeacon fails
+      await fetch(DATA_ENDPOINT, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify(data),
+      });
+    }
   } catch(e) {
-    try { navigator.sendBeacon(DATA_ENDPOINT, new Blob([JSON.stringify(data)],{type:'text/plain'})); }
-    catch(e2) { console.error('Submit failed:', e2); }
+    console.error('Submit failed:', e);
   }
 }
 
