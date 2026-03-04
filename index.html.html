@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvestSim - Investment Simulation Study</title>
+<style>
+:root {
+  --primary: #1a365d;
+  --primary-light: #2a4a7f;
+  --accent: #2b6cb0;
+  --bg: #f7fafc;
+  --card: #ffffff;
+  --text: #1a202c;
+  --text-muted: #718096;
+  --border: #e2e8f0;
+  --success: #38a169;
+  --warning: #d69e2e;
+  --danger: #e53e3e;
+  --radius: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+}
+h1 { font-size: 1.6rem; color: var(--primary); margin-bottom: 16px; line-height: 1.3; }
+h2 { font-size: 1.25rem; color: var(--primary); margin-bottom: 12px; }
+h3 { font-size: 1.05rem; color: var(--primary-light); margin-bottom: 8px; }
+p { margin-bottom: 12px; }
+.text-muted { color: var(--text-muted); font-size: 0.9rem; }
+.text-center { text-align: center; }
+
+/* Progress */
+.progress-wrap {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--card);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s ease; }
+.progress-text {
+  font-size: 0.75rem; color: var(--text-muted);
+  text-align: right; margin-top: 2px;
+  font-family: system-ui, sans-serif;
+}
+
+/* Buttons */
+.btn {
+  display: inline-block; padding: 12px 32px; border: none; border-radius: 6px;
+  font-size: 1rem; font-family: system-ui, sans-serif; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-primary:disabled { background: #a0aec0; cursor: not-allowed; }
+.btn-secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+.btn-choice {
+  display: block; width: 100%; padding: 14px 20px; margin: 8px 0;
+  background: #f7fafc; border: 2px solid var(--border); border-radius: 8px;
+  text-align: left; font-size: 0.95rem; cursor: pointer; transition: all 0.15s;
+  font-family: system-ui, sans-serif;
+}
+.btn-choice:hover { border-color: var(--accent); background: #ebf4ff; }
+.btn-choice.selected { border-color: var(--accent); background: #ebf8ff; box-shadow: 0 0 0 1px var(--accent); }
+.btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+
+/* Scenario display */
+.scenario-box {
+  background: #1a365d; color: white; padding: 24px;
+  border-radius: var(--radius); margin: 16px 0; text-align: center;
+}
+.scenario-box .return-value { font-size: 2rem; font-weight: 700; margin: 8px 0; }
+.scenario-box .return-value.positive { color: #68d391; }
+.scenario-box .return-value.negative { color: #fc8181; }
+.benchmark-info {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  font-size: 0.9rem; opacity: 0.85;
+}
+.comparison-box {
+  background: #744210; color: white; padding: 20px;
+  border-radius: var(--radius); margin: 16px 0; text-align: center;
+}
+.comparison-box .other-return { font-size: 1.6rem; font-weight: 700; margin: 6px 0; }
+
+/* Likert scales */
+.likert-wrap { margin: 16px 0; }
+.likert-question { font-weight: 600; margin-bottom: 8px; font-size: 0.95rem; }
+.likert-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;
+  font-family: system-ui, sans-serif;
+}
+.likert-options { display: flex; justify-content: space-between; gap: 4px; }
+.likert-option { flex: 1; text-align: center; }
+.likert-option input { display: none; }
+.likert-option label {
+  display: block; padding: 10px 4px; border: 2px solid var(--border);
+  border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  transition: all 0.15s; font-family: system-ui, sans-serif;
+}
+.likert-option input:checked + label { border-color: var(--accent); background: #ebf8ff; color: var(--accent); }
+.likert-option label:hover { border-color: #a0aec0; }
+
+/* Satisfaction scale (-5 to +5) */
+.sat-scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; margin: 8px 0; }
+.sat-scale input { display: none; }
+.sat-scale label {
+  display: block; text-align: center; padding: 10px 2px;
+  border: 2px solid var(--border); border-radius: 6px; cursor: pointer;
+  font-size: 0.8rem; font-weight: 600; transition: all 0.15s;
+  font-family: system-ui, sans-serif;
+}
+.sat-scale input:checked + label { border-color: var(--accent); background: #ebf8ff; color: var(--accent); }
+.sat-scale label:hover { border-color: #a0aec0; }
+
+/* Retention slider */
+.slider-wrap { margin: 20px 0; }
+.slider-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;
+  font-family: system-ui, sans-serif;
+}
+input[type="range"] {
+  width: 100%; height: 8px; -webkit-appearance: none;
+  background: linear-gradient(to right, var(--danger), var(--success));
+  border-radius: 4px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%;
+  background: white; border: 3px solid var(--primary); cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.slider-value { text-align: center; margin-top: 8px; font-size: 0.95rem; font-family: system-ui, sans-serif; }
+
+/* Checkbox */
+.checkbox-wrap { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; }
+.checkbox-wrap input[type="checkbox"] { margin-top: 4px; width: 18px; height: 18px; }
+
+/* Misc */
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.error-msg {
+  color: var(--danger); font-size: 0.85rem; margin-top: 4px;
+  font-family: system-ui, sans-serif; display: none;
+}
+.error-msg.visible { display: block; }
+.highlight-box {
+  background: #fffff0; border: 1px solid #d69e2e; border-radius: 8px;
+  padding: 16px; margin: 12px 0;
+}
+
+@media (max-width: 480px) {
+  .card { padding: 20px 16px; }
+  h1 { font-size: 1.3rem; }
+  .scenario-box .return-value { font-size: 1.6rem; }
+  .sat-scale label { padding: 8px 1px; font-size: 0.7rem; }
+  .likert-option label { padding: 8px 2px; font-size: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-wrap" id="progressWrap" style="display:none;">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text" id="progressText"></div>
+</div>
+
+<div class="container" id="app"></div>
+
+<script>
+// ============================================================
+// INVESTSIM v5 - SVF STUDY 2 MECHANISM EXPERIMENT
+// Between (benchmark) | 6 scenarios | Behavioral intentions
+// ============================================================
+
+const CONFIG = {
+  PROLIFIC_URL: 'https://app.prolific.com/submissions/complete?cc=XXXXXXXX',
+  N_SCENARIOS: 12,
+  BASE_PAY: 2.40,
+};
+
+const SCENARIOS = [
+  // Gain-Low (my +8%)
+  { id:1,  my:8,   other:20,  domain:'gain', dir:'upward',   bench:5,   level:'low' },
+  { id:2,  my:8,   other:8,   domain:'gain', dir:'equal',    bench:5,   level:'low' },
+  { id:3,  my:8,   other:-4,  domain:'gain', dir:'downward', bench:5,   level:'low' },
+  // Gain-High (my +20%)
+  { id:4,  my:20,  other:32,  domain:'gain', dir:'upward',   bench:15,  level:'high' },
+  { id:5,  my:20,  other:20,  domain:'gain', dir:'equal',    bench:15,  level:'high' },
+  { id:6,  my:20,  other:8,   domain:'gain', dir:'downward', bench:15,  level:'high' },
+  // Loss-Low (my -8%)
+  { id:7,  my:-8,  other:4,   domain:'loss', dir:'upward',   bench:-5,  level:'low' },
+  { id:8,  my:-8,  other:-8,  domain:'loss', dir:'equal',    bench:-5,  level:'low' },
+  { id:9,  my:-8,  other:-20, domain:'loss', dir:'downward', bench:-5,  level:'low' },
+  // Loss-High (my -20%)
+  { id:10, my:-20, other:-8,  domain:'loss', dir:'upward',   bench:-15, level:'high' },
+  { id:11, my:-20, other:-20, domain:'loss', dir:'equal',    bench:-15, level:'high' },
+  { id:12, my:-20, other:-32, domain:'loss', dir:'downward', bench:-15, level:'high' },
+];
+
+const EMOTIONS = {
+  upward: [
+    { key:'envy',        label:'I feel envious of the other investor' },
+    { key:'deprivation', label:'I feel I got less than I deserved' },
+  ],
+  equal: [
+    { key:'comfort',        label:'I feel comforted knowing we had the same result' },
+    { key:'disappointment', label:'I feel disappointed that my result isn\'t better than others' },
+  ],
+  downward: [
+    { key:'relief',      label:'I feel relieved' },
+    { key:'superiority', label:'I feel proud of my relative performance' },
+  ],
+};
+
+const PROCESSING_MODES = [
+  { key:'competitive',   text:'As a signal of <strong>where I rank</strong> among investors' },
+  { key:'normalizing',   text:'As reassurance that <strong>results like mine are normal</strong>' },
+  { key:'informational', text:'As <strong>useful data</strong> for future decisions' },
+  { key:'dismissive',    text:'I didn\'t pay much attention to it' },
+];
+
+// ===== STATE =====
+const S = {
+  pid: getProlificPid(),
+  condition: Math.random() < 0.5 ? 'benchmark' : 'no_benchmark',
+  order: shuffle([...Array(12).keys()]),
+  idx: 0,
+  phase: 'consent',
+  t0: Date.now(),
+  responses: [],
+  cur: {},
+  battery: {},
+  demo: {},
+  // IMC: content recall between scenario 3-8 (avoid first 2 and last 4)
+  imcTarget: 2 + Math.floor(Math.random()*6),
+  imcPassed: null,
+};
+
+function getProlificPid() {
+  const p = new URLSearchParams(window.location.search);
+  return p.get('PROLIFIC_PID') || 'test_' + Math.random().toString(36).substr(2,8);
+}
+function shuffle(a) {
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function fmt(r) { return (r>=0?'+':'')+r+'%'; }
+function fmtD(r) { const d=Math.abs(r*100); return (r>=0?'+$':'-$')+d.toLocaleString(); }
+
+// ===== RENDER =====
+function render(html) {
+  document.getElementById('app').innerHTML = html;
+  window.scrollTo({top:0, behavior:'smooth'});
+  updateProgress();
+}
+function updateProgress() {
+  const w = document.getElementById('progressWrap');
+  const f = document.getElementById('progressFill');
+  const t = document.getElementById('progressText');
+  if (['consent','screening','instructions','practice'].includes(S.phase)) {
+    w.style.display='none'; return;
+  }
+  w.style.display='block';
+  let pct=0;
+  if (S.phase==='scenario') pct = (S.idx/6)*75;
+  else if (S.phase==='midbreak') pct = 37;
+  else if (S.phase==='postbattery') pct = 80;
+  else if (S.phase==='demographics') pct = 92;
+  else if (S.phase==='complete') pct = 100;
+  f.style.width = pct+'%';
+  t.textContent = Math.round(pct)+'% complete';
+}
+
+// ===== LIKERT BUILDERS =====
+function mkLikert(name, min, max) {
+  let h='<div class="likert-options">';
+  for (let i=min;i<=max;i++)
+    h+=`<div class="likert-option"><input type="radio" name="${name}" id="${name}_${i}" value="${i}" onchange="rec('${name}',${i})"><label for="${name}_${i}">${i}</label></div>`;
+  return h+'</div>';
+}
+function mkSat(name) {
+  let h='<div class="sat-scale">';
+  for (let i=-5;i<=5;i++)
+    h+=`<div><input type="radio" name="${name}" id="${name}_${i}" value="${i}" onchange="rec('${name}',${i})"><label for="${name}_${i}">${i}</label></div>`;
+  return h+'</div>';
+}
+function rec(k,v) { S.cur[k]=v; }
+
+// ============================================================
+// PAGE: CONSENT
+// ============================================================
+function showConsent() {
+  S.phase='consent';
+  render(`<div class="card">
+    <h1>InvestSim - Investment Simulation Study</h1>
+    <p>Thank you for your interest in this research study.</p>
+    <h3>What is this study about?</h3>
+    <p>We are studying how people evaluate investment outcomes. You will play through
+    <strong>12 rounds</strong> of an investment simulation where you see your fund's
+    performance and respond to questions.</p>
+    <h3>What will I do?</h3>
+    <p>In each round, you will see your fund's return, rate your satisfaction,
+    learn about another investor's return, answer questions about your reactions,
+    and indicate your investment intentions.</p>
+    <h3>How long will it take?</h3>
+    <p>Approximately <strong>15-20 minutes</strong>.</p>
+    <h3>Compensation</h3>
+    <p>You will receive the payment shown on Prolific for completing this study.</p>
+    <h3>Confidentiality</h3>
+    <p>All responses are anonymous and used for academic research only.
+    Your Prolific ID is recorded solely for payment processing.</p>
+    <h3>Data Quality</h3>
+    <p>This study measures investment decision-making processes precisely.
+    Responses that fall below a <strong>statistically determined minimum completion time</strong>
+    or show patterns of inattentive responding may be flagged during data review.</p>
+    <div class="checkbox-wrap">
+      <input type="checkbox" id="c1">
+      <label for="c1">I am 18 years or older and consent to participate.
+      I understand my participation is voluntary.</label>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="consentBtn" disabled onclick="showPledge()">Continue</button>
+    </div>
+  </div>`);
+  document.getElementById('c1').onchange = function() {
+    document.getElementById('consentBtn').disabled = !this.checked;
+  };
+}
+
+// ============================================================
+// PAGE: QUALITY PLEDGE
+// ============================================================
+function showPledge() {
+  S.phase='consent';
+  render(`<div class="card">
+    <h1>Research Quality Commitment</h1>
+    <p>This research depends on thoughtful, honest responses from participants like you.
+    Each scenario is hypothetical, but we ask you to imagine it as your <strong>real
+    investment situation</strong> and respond accordingly.</p>
+    <p>Your careful attention directly contributes to advancing scientific knowledge
+    about how people make financial decisions.</p>
+    <div class="highlight-box" style="text-align:center;">
+      <p style="font-weight:600;margin-bottom:4px;">I commit to:</p>
+      <p>Reading each scenario carefully, imagining it as real,
+      and giving my honest reactions throughout this study.</p>
+    </div>
+    <div class="checkbox-wrap">
+      <input type="checkbox" id="pledge">
+      <label for="pledge">I understand and commit to responding thoughtfully.</label>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="pledgeBtn" disabled onclick="showScreening()">Continue</button>
+    </div>
+  </div>`);
+  document.getElementById('pledge').onchange = function() {
+    document.getElementById('pledgeBtn').disabled = !this.checked;
+  };
+}
+
+// ============================================================
+// PAGE: SCREENING
+// ============================================================
+function showScreening() {
+  S.phase='screening'; S.cur={};
+  render(`<div class="card">
+    <h1>Quick Background</h1>
+    <div class="likert-wrap">
+      <p class="likert-question">Do you have personal experience investing in
+      stocks, bonds, mutual funds, ETFs, or similar financial products?</p>
+      <button class="btn-choice" onclick="pickScreen(this,'yes')">
+        <strong>Yes</strong> - I currently invest or have invested in the past</button>
+      <button class="btn-choice" onclick="pickScreen(this,'no')">
+        <strong>No</strong> - I have never personally invested</button>
+    </div>
+    <div id="screenErr" class="error-msg">
+      Sorry, this study requires participants with investment experience.
+      Please return this study on Prolific.</div>
+    <div class="btn-row" id="screenNext" style="display:none;">
+      <button class="btn btn-primary" onclick="showInstructions()">Continue</button>
+    </div>
+  </div>`);
+}
+function pickScreen(el,v) {
+  document.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.hasExperience = v==='yes';
+  if (v==='yes') {
+    document.getElementById('screenErr').classList.remove('visible');
+    document.getElementById('screenNext').style.display='flex';
+  } else {
+    document.getElementById('screenErr').classList.add('visible');
+    document.getElementById('screenNext').style.display='none';
+  }
+}
+
+// ============================================================
+// PAGE: INSTRUCTIONS
+// ============================================================
+function showInstructions() {
+  S.phase='instructions';
+  const benchNote = S.condition==='benchmark'
+    ? '<p>In each round, you will also see a <strong>market benchmark index return</strong> for the same period, giving you additional context for evaluating your result.</p>'
+    : '';
+  render(`<div class="card">
+    <h1>How InvestSim Works</h1>
+    <h3>The Simulation</h3>
+    <p>You will play <strong>12 independent rounds</strong>. Each round represents
+    a separate 6-month investment of $10,000 in a managed fund.</p>
+    ${benchNote}
+    <p><strong>Important:</strong> Each round is completely independent -
+    your responses in one round do not affect the next.</p>
+    <h3>Each Round</h3>
+    <p>1. See how your fund performed over 6 months<br>
+    2. Rate your satisfaction and answer brief questions<br>
+    3. Learn how another investor's fund performed<br>
+    4. Answer questions about your reactions<br>
+    5. Indicate your investment intentions</p>
+    <div class="highlight-box">
+      <p><strong>Please respond honestly.</strong> There are no right or wrong answers.
+      We are interested in your genuine reactions to each scenario.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showComprehension()">I understand - Continue</button>
+    </div>
+  </div>`);
+}
+
+// ============================================================
+// PAGE: COMPREHENSION CHECK
+// ============================================================
+function showComprehension() {
+  S.cur = {};
+  render(`<div class="card">
+    <h1>Quick Check</h1>
+    <p>Please confirm you understand the study.</p>
+    <div class="likert-wrap">
+      <p class="likert-question">1. How many rounds will you complete?</p>
+      <button class="btn-choice" onclick="pickComp(this,1,'a')">6 rounds</button>
+      <button class="btn-choice" onclick="pickComp(this,1,'b')">12 rounds</button>
+      <button class="btn-choice" onclick="pickComp(this,1,'c')">18 rounds</button>
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">2. Are the rounds connected to each other?</p>
+      <button class="btn-choice" onclick="pickComp(this,2,'a')">No, each round is completely independent</button>
+      <button class="btn-choice" onclick="pickComp(this,2,'b')">Yes, results carry over between rounds</button>
+    </div>
+    <div id="compErr" class="error-msg">Incorrect. Please re-read the instructions and try again.</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="showInstructions()">Back to Instructions</button>
+      <button class="btn btn-primary" onclick="checkComp()">Continue</button>
+    </div>
+  </div>`);
+}
+function pickComp(el,q,v) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.cur['comp'+q]=v;
+}
+function checkComp() {
+  S.compAttempts = (S.compAttempts||0)+1;
+  if (S.cur.comp1==='b' && S.cur.comp2==='a') {
+    startRounds();
+  } else {
+    document.getElementById('compErr').classList.add('visible');
+  }
+}
+
+// ============================================================
+// SCENARIO ENGINE
+// ============================================================
+function startRounds() {
+  S.phase='scenario'; S.idx=0;
+  showPhase1();
+}
+
+function sc() { return SCENARIOS[S.order[S.idx]]; }
+
+// ----- PHASE 1: My return + Pre-comparison measures -----
+function showPhase1() {
+  const s = sc(), n = S.idx+1;
+  S.cur = {
+    scenario_id: s.id, order: n, domain: s.domain, dir: s.dir, level: s.level,
+    myReturn: s.my, otherReturn: s.other, benchReturn: s.bench,
+    condition: S.condition,
+    t_p1_start: Date.now(),
+  };
+
+  render(`<div class="card">
+    <div class="text-muted text-center" style="margin-bottom:12px;">Round ${n} of 12</div>
+
+    <div class="scenario-box">
+      <div>You invested <strong>$10,000</strong> in a managed fund. After 6 months:</div>
+      <div class="return-value ${s.my>=0?'positive':'negative'}">${fmt(s.my)} (${fmtD(s.my)})</div>
+      ${S.condition==='benchmark' ? `<div class="benchmark-info">Market benchmark index return for this period: <strong>${fmt(s.bench)}</strong></div>` : ''}
+    </div>
+
+    <hr class="divider">
+
+    <!-- M1: Evaluative Confidence -->
+    <div class="likert-wrap">
+      <p class="likert-question">How confident are you that this is a ${s.my>=0?'good':'bad'} result?</p>
+      <div class="likert-labels"><span>Not at all confident</span><span>Completely confident</span></div>
+      ${mkLikert('m1_conf',1,7)}
+    </div>
+
+    <!-- C1: Self-Attribution -->
+    <div class="likert-wrap">
+      <p class="likert-question">To what extent does this result reflect your investment judgment
+      (as opposed to external market factors)?</p>
+      <div class="likert-labels"><span>Entirely external factors</span><span>Entirely my judgment</span></div>
+      ${mkLikert('c1_attrib',1,7)}
+    </div>
+
+    <!-- C2: Motivational Priority -->
+    <div class="likert-wrap">
+      <p class="likert-question">What matters more to you right now?</p>
+      <button class="btn-choice" onclick="pickMotiv(this,'protect')">
+        How to <strong>manage or protect</strong> my investment result</button>
+      <button class="btn-choice" onclick="pickMotiv(this,'status')">
+        How my result <strong>compares to other investors</strong></button>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Q1a: Pre-comparison satisfaction -->
+    <div class="likert-wrap">
+      <p class="likert-question">How satisfied are you with this investment result?</p>
+      <div class="likert-labels"><span>Very dissatisfied</span><span>Neutral</span><span>Very satisfied</span></div>
+      ${mkSat('q1a')}
+    </div>
+
+    <div id="p1Err" class="error-msg">Please answer all questions before continuing.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitP1()">Continue</button>
+    </div>
+  </div>`);
+}
+
+function pickMotiv(el,v) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.cur.c2_motiv = v;
+}
+
+function submitP1() {
+  const c = S.cur;
+  if (c.m1_conf===undefined || c.c1_attrib===undefined || c.c2_motiv===undefined || c.q1a===undefined) {
+    document.getElementById('p1Err').classList.add('visible'); return;
+  }
+  c.t_p1_end = Date.now();
+
+  // Content recall IMC at target scenario
+  if (S.idx === S.imcTarget) {
+    showContentRecall();
+  } else {
+    showPhase2();
+  }
+}
+
+// ----- CONTENT RECALL IMC -----
+function showContentRecall() {
+  const s = sc(), n = S.idx+1;
+  // Generate 4 options: correct + 3 distractors
+  const correct = s.my;
+  const distractors = new Set();
+  while (distractors.size < 3) {
+    const d = correct + (Math.random() < 0.5 ? 1 : -1) * ([6,12,18,24][Math.floor(Math.random()*4)]);
+    if (d !== correct) distractors.add(d);
+  }
+  const options = shuffle([correct, ...distractors]);
+  S.cur._imcCorrect = correct;
+
+  render(`<div class="card">
+    <div class="text-muted text-center" style="margin-bottom:12px;">Round ${n} of 12</div>
+    <h3>Quick Check</h3>
+    <p>What was <strong>your fund's return</strong> shown on the previous screen?</p>
+    <div class="likert-wrap">
+      ${options.map(o =>
+        `<button class="btn-choice" style="text-align:center;" onclick="pickRecall(this,${o})"><strong>${fmt(o)}</strong></button>`
+      ).join('')}
+    </div>
+    <div id="recallErr" class="error-msg">Please select an answer.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitRecall()">Continue</button>
+    </div>
+  </div>`);
+}
+
+function pickRecall(el,v) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.cur._imcAnswer = v;
+}
+
+function submitRecall() {
+  if (S.cur._imcAnswer === undefined) {
+    document.getElementById('recallErr').classList.add('visible'); return;
+  }
+  S.imcPassed = (S.cur._imcAnswer === S.cur._imcCorrect);
+  S.cur.imc_correct = S.imcPassed;
+
+  if (!S.imcPassed) {
+    // Show warning but continue
+    render(`<div class="card">
+      <h3>Please pay closer attention</h3>
+      <p>Your answer did not match the return shown. Please read each scenario carefully
+      for the remainder of the study.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="showPhase2()">Continue</button>
+      </div>
+    </div>`);
+  } else {
+    showPhase2();
+  }
+}
+
+// ----- PHASE 2: Comparison + Post-comparison measures -----
+function showPhase2() {
+  const s = sc(), n = S.idx+1;
+  const emos = EMOTIONS[s.dir];
+  const modes = shuffle([...PROCESSING_MODES]);
+  S.cur._modeOrder = modes.map(m=>m.key);
+  S.cur.t_p2_start = Date.now();
+
+  render(`<div class="card">
+    <div class="text-muted text-center" style="margin-bottom:12px;">Round ${n} of 12</div>
+
+    <div class="scenario-box" style="padding:16px;">
+      <div style="font-size:0.9rem;">Your return: <strong>${fmt(s.my)} (${fmtD(s.my)})</strong></div>
+    </div>
+
+    <p style="text-align:center;font-weight:600;margin:12px 0;">
+      You now learn that <strong>another investor</strong> in a similar fund earned:</p>
+
+    <div class="comparison-box">
+      <div class="other-return">${fmt(s.other)} (${fmtD(s.other)})</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- M3: Processing Mode -->
+    <div class="likert-wrap">
+      <p class="likert-question">How did you interpret the other investor's result?</p>
+      ${modes.map(m =>
+        `<button class="btn-choice" onclick="pickProc(this,'${m.key}')">${m.text}</button>`
+      ).join('')}
+    </div>
+
+    <hr class="divider">
+
+    <!-- Emotions (2 per direction) -->
+    <h3>How do you feel right now?</h3>
+    ${emos.map(em => `
+      <div class="likert-wrap">
+        <p class="likert-question" style="font-weight:normal;font-style:italic;">"${em.label}"</p>
+        <div class="likert-labels"><span>Not at all</span><span>Very strongly</span></div>
+        ${mkLikert('emo_'+em.key, 1, 7)}
+      </div>
+    `).join('')}
+
+    <hr class="divider">
+
+    <!-- Q1b: Post-comparison satisfaction -->
+    <div class="likert-wrap">
+      <p class="likert-question">Now that you know the other investor's result,
+      how satisfied are you with <strong>your</strong> result?</p>
+      <div class="likert-labels"><span>Very dissatisfied</span><span>Neutral</span><span>Very satisfied</span></div>
+      ${mkSat('q1b')}
+    </div>
+
+    <div id="p2Err" class="error-msg">Please answer all questions before continuing.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitP2()">Continue</button>
+    </div>
+  </div>`);
+}
+
+function pickProc(el,mode) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.cur.m3_processing = mode;
+}
+
+function submitP2() {
+  const c = S.cur, s = sc();
+  const emos = EMOTIONS[s.dir];
+  if (!c.m3_processing || !emos.every(e => c['emo_'+e.key] !== undefined) || c.q1b===undefined) {
+    document.getElementById('p2Err').classList.add('visible'); return;
+  }
+  c.delta = c.q1b - c.q1a;
+  c.t_p2_end = Date.now();
+
+  // Ceiling/floor check for sat_change
+  if ((c.q1a === -5 && c.q1b === -5) || (c.q1a === 5 && c.q1b === 5)) {
+    showSatChange();
+  } else {
+    c.sat_change = null;
+    showPhase3();
+  }
+}
+
+// ----- SAT_CHANGE: Conditional for ceiling/floor -----
+function showSatChange() {
+  const n = S.idx+1;
+  render(`<div class="card">
+    <div class="text-muted text-center" style="margin-bottom:12px;">Round ${n} of 12</div>
+
+    <p>You rated your satisfaction the same before and after learning the other investor's result.
+    We'd like to understand any subtle change you may have experienced.</p>
+
+    <div class="likert-wrap">
+      <p class="likert-question">Compared with <strong>before</strong> learning the other
+      investor's result, did your satisfaction change?</p>
+      <div class="likert-labels"><span>Much worse (-3)</span><span>No change (0)</span><span>Much better (+3)</span></div>
+      <div class="likert-options">
+        ${[-3,-2,-1,0,1,2,3].map(i =>
+          `<div class="likert-option"><input type="radio" name="sat_change" id="sc_${i}" value="${i}" onchange="rec('sat_change',${i})"><label for="sc_${i}">${i}</label></div>`
+        ).join('')}
+      </div>
+    </div>
+
+    <div id="scErr" class="error-msg">Please answer before continuing.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitSatChange()">Continue</button>
+    </div>
+  </div>`);
+}
+
+function submitSatChange() {
+  if (S.cur.sat_change === undefined) {
+    document.getElementById('scErr').classList.add('visible'); return;
+  }
+  showPhase3();
+}
+
+// ----- PHASE 3: Behavioral Intentions -----
+function showPhase3() {
+  const s = sc(), n = S.idx+1;
+  S.cur.t_p3_start = Date.now();
+
+  render(`<div class="card">
+    <div class="text-muted text-center" style="margin-bottom:12px;">
+      Round ${n} of 12 - Your Intentions</div>
+
+    <div class="scenario-box" style="padding:14px;">
+      <div style="font-size:0.9rem;">
+        Your return: <strong>${fmt(s.my)}</strong> &nbsp;|&nbsp;
+        Other investor: <strong>${fmt(s.other)}</strong></div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Task 1: Investment Retention -->
+    <h3>Investment Retention</h3>
+    <p>How likely are you to <strong>continue investing in this fund</strong> for the next period?</p>
+    <div class="slider-wrap">
+      <div class="slider-labels">
+        <span style="color:var(--danger);">Definitely exit (0)</span>
+        <span style="color:var(--success);">Definitely stay (100)</span></div>
+      <input type="range" id="retainSlider" min="0" max="100" value="100" step="1"
+        oninput="updateRetain()">
+      <div class="slider-value" id="retainDisp"><strong>100</strong> / 100</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Task 2: Social Comparison Information Seeking -->
+    <h3>Information Seeking</h3>
+    <div class="likert-wrap">
+      <p class="likert-question">How much do you want to know how <strong>other investors</strong>
+      in similar funds performed?</p>
+      <div class="likert-labels"><span>Not at all</span><span>Very much</span></div>
+      ${mkLikert('info_seek',1,7)}
+    </div>
+
+    <hr class="divider">
+
+    <!-- Task 3: Sharing Intention -->
+    <h3>Sharing Intention</h3>
+    <div class="likert-wrap">
+      <p class="likert-question">How willing are you to share your investment result
+      (${fmt(s.my)}) with other people?</p>
+      <div class="likert-labels"><span>Not at all willing</span><span>Very willing</span></div>
+      ${mkLikert('share_intent',1,7)}
+    </div>
+
+    <hr class="divider">
+
+    <!-- Reason (specific to retention) -->
+    <div class="likert-wrap">
+      <p class="likert-question">What is the main reason for your fund retention decision above?</p>
+      <button class="btn-choice" onclick="pickReason(this,'satisfied')">
+        I'm satisfied with this fund's performance</button>
+      <button class="btn-choice" onclick="pickReason(this,'comparison')">
+        The other investor's result made me reconsider</button>
+      <button class="btn-choice" onclick="pickReason(this,'market')">
+        General market conditions</button>
+      <button class="btn-choice" onclick="pickReason(this,'no_reason')">
+        No particular reason</button>
+    </div>
+
+    <div id="p3Err" class="error-msg">Please answer all questions before continuing.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitP3()">
+        ${S.idx < 11 ? 'Next Round' : 'Continue'}</button>
+    </div>
+  </div>`);
+}
+
+function updateRetain() {
+  const v = document.getElementById('retainSlider').value;
+  document.getElementById('retainDisp').innerHTML = `<strong>${v}</strong> / 100`;
+}
+
+function pickReason(el,v) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.cur.reason = v;
+}
+
+function submitP3() {
+  const c = S.cur;
+  if (c.info_seek===undefined || c.share_intent===undefined || c.reason===undefined) {
+    document.getElementById('p3Err').classList.add('visible'); return;
+  }
+  c.retention = parseInt(document.getElementById('retainSlider').value);
+  c.t_p3_end = Date.now();
+
+  // Clean temp
+  delete c._modeOrder;
+  delete c._imcCorrect;
+  delete c._imcAnswer;
+
+  S.responses.push({...c});
+  S.cur = {};
+
+  S.idx++;
+  if (S.idx === 6) { showMidBreak(); }
+  else if (S.idx < 12) { showPhase1(); }
+  else { showPostBattery(); }
+}
+
+// ============================================================
+// MID-BREAK
+// ============================================================
+function showMidBreak() {
+  S.phase = 'midbreak';
+  render(`<div class="card">
+    <h1 class="text-center">Halfway Complete!</h1>
+    <p class="text-center">You've finished 6 of 12 rounds. Great work so far.</p>
+    <p class="text-center">Take a moment to rest if you'd like, then continue when ready.</p>
+
+    <hr class="divider">
+
+    <div class="likert-wrap">
+      <p class="likert-question">Attention check: In this study, you have been
+      evaluating investment outcomes and answering questions about your reactions.
+      To show you are paying attention, please select <strong>"Somewhat agree"</strong>.</p>
+      <button class="btn-choice" onclick="pickAttn(this,'sd')">Strongly disagree</button>
+      <button class="btn-choice" onclick="pickAttn(this,'d')">Disagree</button>
+      <button class="btn-choice" onclick="pickAttn(this,'sa')">Somewhat agree</button>
+      <button class="btn-choice" onclick="pickAttn(this,'a')">Strongly agree</button>
+    </div>
+
+    <div id="midErr" class="error-msg">Please select an answer.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitMid()">Continue - 6 Rounds Remaining</button>
+    </div>
+  </div>`);
+  updateProgress();
+}
+
+function pickAttn(el,v) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.attn_check = v;
+}
+
+function submitMid() {
+  if (!S.attn_check) { document.getElementById('midErr').classList.add('visible'); return; }
+  S.attn_passed = S.attn_check === 'sa';
+  S.phase = 'scenario';
+  showPhase1();
+}
+
+// ============================================================
+// POST-SCENARIO BATTERY
+// ============================================================
+function showPostBattery() {
+  S.phase = 'postbattery';
+  S.cur = {};
+
+  const incomItems = [
+    'I often compare how my loved ones are doing with how others are doing.',
+    'I always pay a lot of attention to how I do things compared with how others do things.',
+    'If I want to find out how well I have done something, I compare what I have done with how others have done.',
+    'I often compare how I am doing socially with other people.',
+    'I am not the type of person who compares often with others.',
+    'I often like to talk with others about mutual opinions and experiences.',
+  ];
+
+  render(`<div class="card">
+    <h1>Almost Done - Final Questions</h1>
+    <p>Thank you for completing all 12 rounds!</p>
+
+    <hr class="divider">
+
+    <h2>Social Comparison</h2>
+    <p class="text-muted">How much do you agree? (1 = Strongly disagree, 5 = Strongly agree)</p>
+    ${incomItems.map((item,i) => `
+      <div class="likert-wrap">
+        <p class="likert-question" style="font-weight:normal;">"${item}"</p>
+        <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+        ${mkLikert('incom_'+(i+1), 1, 5)}
+      </div>
+    `).join('')}
+
+    <hr class="divider">
+
+    <h2>Financial Knowledge</h2>
+    <div class="likert-wrap">
+      <p class="likert-question">Suppose you had $100 in a savings account at 2% annual interest.
+      After 5 years, how much would you have?</p>
+      <button class="btn-choice" onclick="pickBat(this,'fl1','more')">More than $102</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl1','exactly')">Exactly $102</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl1','less')">Less than $102</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl1','dk')">Don't know</button>
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">If interest on savings was 1%/year and inflation 2%/year,
+      after 1 year you could buy...</p>
+      <button class="btn-choice" onclick="pickBat(this,'fl2','more')">More than today</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl2','same')">Same as today</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl2','less')">Less than today</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl2','dk')">Don't know</button>
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">"Buying a single company stock usually provides a safer
+      return than a stock mutual fund." True or false?</p>
+      <button class="btn-choice" onclick="pickBat(this,'fl3','true')">True</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl3','false')">False</button>
+      <button class="btn-choice" onclick="pickBat(this,'fl3','dk')">Don't know</button>
+    </div>
+
+    <hr class="divider">
+
+    <h2>Risk Preference</h2>
+    <div class="likert-wrap">
+      <p class="likert-question">How willing are you to take risks, in general?</p>
+      <div class="likert-labels"><span>Not at all willing (0)</span><span>Very willing (10)</span></div>
+      ${mkLikert('risk_pref', 0, 10)}
+    </div>
+
+    <hr class="divider">
+
+    <h2>Investment Background</h2>
+    <div class="likert-wrap">
+      <p class="likert-question">How many years have you been investing?</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${['Less than 1','1-3','4-6','7-10','More than 10'].map(y =>
+          `<button class="btn-choice" style="flex:1;min-width:80px;text-align:center;"
+            onclick="pickBat(this,'inv_years','${y}')">${y}</button>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">How often do you check your investment performance?</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${['Daily','Weekly','Monthly','Quarterly','Rarely'].map(f =>
+          `<button class="btn-choice" style="flex:1;min-width:80px;text-align:center;"
+            onclick="pickBat(this,'inv_freq','${f}')">${f}</button>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">What is the approximate total value of your current investment portfolio?</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${[["under1k","Under $1k"],["1k_10k","$1k-10k"],["10k_50k","$10k-50k"],["50k_100k","$50k-100k"],["100k_500k","$100k-500k"],["over500k","Over $500k"],["pnts","Prefer not to say"]].map(([k,lbl]) =>
+          `<button class="btn-choice" style="flex:1;min-width:90px;text-align:center;"
+            onclick="pickBat(this,'portfolio_size','${k}')">${lbl}</button>`
+        ).join('')}
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h2>Counterfactual Thinking</h2>
+    <div class="likert-wrap">
+      <p class="likert-question">During the rounds, to what extent did you find yourself thinking
+      "what if I had invested differently"?</p>
+      <div class="likert-labels"><span>Not at all</span><span>Very much</span></div>
+      ${mkLikert('counterfactual', 1, 7)}
+    </div>
+
+    <hr class="divider">
+
+    <h2>Study Feedback</h2>
+    <div class="likert-wrap">
+      <p class="likert-question">Overall, how confident were you about whether your
+      investment results were good or bad?</p>
+      <div class="likert-labels"><span>Not at all confident</span><span>Completely confident</span></div>
+      ${mkLikert('mc_conf', 1, 7)}
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">To what extent did you have a clear standard to judge
+      your performance?</p>
+      <div class="likert-labels"><span>No standard at all</span><span>Very clear standard</span></div>
+      ${mkLikert('mc_standard', 1, 7)}
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">Did the rounds include market benchmark index information?</p>
+      <div style="display:flex;gap:12px;">
+        <button class="btn-choice" style="flex:1;text-align:center;" onclick="pickBat(this,'mc_bench','yes')">Yes</button>
+        <button class="btn-choice" style="flex:1;text-align:center;" onclick="pickBat(this,'mc_bench','no')">No</button>
+        <button class="btn-choice" style="flex:1;text-align:center;" onclick="pickBat(this,'mc_bench','unsure')">Not sure</button>
+      </div>
+    </div>
+    ${S.condition==='benchmark' ? `
+      <div class="likert-wrap">
+        <p class="likert-question">How useful was the market benchmark information?</p>
+        <div class="likert-labels"><span>Not useful at all</span><span>Extremely useful</span></div>
+        ${mkLikert('bench_useful', 1, 7)}
+      </div>
+    ` : ''}
+
+    <div id="batErr" class="error-msg">Please answer all questions before continuing.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitBattery()">Continue</button>
+    </div>
+  </div>`);
+  updateProgress();
+}
+
+function pickBat(el,key,val) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.battery[key] = val;
+}
+
+function submitBattery() {
+  // Transfer likert values from S.cur
+  const fields = ['risk_pref','mc_conf','mc_standard','counterfactual','bench_useful'];
+  fields.forEach(f => { if(S.cur[f]!==undefined) S.battery[f]=S.cur[f]; });
+  for (let i=1;i<=6;i++) { if(S.cur['incom_'+i]!==undefined) S.battery['incom_'+i]=S.cur['incom_'+i]; }
+
+  // Validate
+  const hasIncom = [1,2,3,4,5,6].every(i => S.battery['incom_'+i]!==undefined);
+  const hasFL = S.battery.fl1 && S.battery.fl2 && S.battery.fl3;
+  const hasRisk = S.battery.risk_pref !== undefined;
+  const hasInv = S.battery.inv_years && S.battery.inv_freq && S.battery.portfolio_size;
+  const hasMC = S.battery.mc_conf!==undefined && S.battery.mc_standard!==undefined && S.battery.mc_bench;
+  const hasCF = S.battery.counterfactual !== undefined;
+  const hasBenchQ = S.condition==='benchmark' ? S.battery.bench_useful!==undefined : true;
+
+  if (!hasIncom || !hasFL || !hasRisk || !hasInv || !hasMC || !hasCF || !hasBenchQ) {
+    document.getElementById('batErr').classList.add('visible'); return;
+  }
+
+  // Compute scores
+  S.battery.finlit_score = (S.battery.fl1==='more'?1:0)+(S.battery.fl2==='less'?1:0)+(S.battery.fl3==='false'?1:0);
+  const incomVals = [1,2,3,4,5,6].map(i=>S.battery['incom_'+i]);
+  incomVals[4] = 6 - incomVals[4]; // reverse item 5
+  S.battery.incom_mean = incomVals.reduce((a,b)=>a+b,0)/6;
+
+  S.cur = {};
+  showDemographics();
+}
+
+// ============================================================
+// DEMOGRAPHICS
+// ============================================================
+function showDemographics() {
+  S.phase = 'demographics';
+  render(`<div class="card">
+    <h1>About You</h1>
+    <div class="likert-wrap">
+      <p class="likert-question">Age</p>
+      <input type="number" id="dAge" min="18" max="99"
+        style="width:100%;padding:10px;border:2px solid var(--border);border-radius:6px;font-size:1rem;">
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">Gender</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${['Male','Female','Non-binary','Prefer not to say'].map(g =>
+          `<button class="btn-choice" style="flex:1;min-width:100px;text-align:center;"
+            onclick="pickDemo(this,'gender','${g}')">${g}</button>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">Highest education completed</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${[["hs","High school"],["sc","Some college"],["ba","Bachelor's"],["ma","Master's"],["phd","Doctorate"],["other","Other"]].map(([k,lbl]) =>
+          `<button class="btn-choice" style="flex:1;min-width:100px;text-align:center;"
+            onclick="pickDemo(this,'education','${k}')">${lbl}</button>`
+        ).join('')}
+      </div>
+    </div>
+    <div class="likert-wrap">
+      <p class="likert-question">Annual household income</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${[["under30","Under $30k"],["30_50","$30-50k"],["50_75","$50-75k"],["75_100","$75-100k"],["100_150","$100-150k"],["over150","Over $150k"],["pnts","Prefer not to say"]].map(([k,lbl]) =>
+          `<button class="btn-choice" style="flex:1;min-width:90px;text-align:center;"
+            onclick="pickDemo(this,'income','${k}')">${lbl}</button>`
+        ).join('')}
+      </div>
+    </div>
+    <div id="demoErr" class="error-msg">Please answer all questions.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitDemo()">Complete Study</button>
+    </div>
+  </div>`);
+  updateProgress();
+}
+
+function pickDemo(el,key,val) {
+  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  S.demo[key] = val;
+}
+
+function submitDemo() {
+  const age = parseInt(document.getElementById('dAge').value);
+  if (!age || age < 18 || age > 130 || !S.demo.gender || !S.demo.education || !S.demo.income) {
+    const err = document.getElementById('demoErr');
+    if (age && (age < 18 || age > 130)) {
+      err.textContent = 'Please enter a valid age (18-130).';
+    } else {
+      err.textContent = 'Please answer all questions.';
+    }
+    err.classList.add('visible'); return;
+  }
+  S.demo.age = age;
+  showCompletion();
+}
+
+// ============================================================
+// COMPLETION
+// ============================================================
+function showCompletion() {
+  S.phase = 'complete';
+  S.endTime = Date.now();
+
+  const data = exportData();
+  submitData(data);
+
+  render(`<div class="card">
+    <h1 class="text-center">Thank You!</h1>
+    <p class="text-center">Your responses have been recorded.</p>
+    <p class="text-center">Your payment will be processed through Prolific.</p>
+    <p class="text-muted text-center">Total time: ${Math.round((S.endTime-S.t0)/60000)} minutes</p>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="window.location.href='${CONFIG.PROLIFIC_URL}'">
+        Complete &amp; Return to Prolific</button>
+    </div>
+    <p class="text-muted text-center" style="margin-top:12px;">
+      If the button doesn't work, use completion code: <strong>XXXXXXXX</strong></p>
+    <div class="text-center" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="downloadData()"
+        style="font-size:0.8rem;padding:6px 16px;">Download Data (Testing)</button>
+    </div>
+  </div>`);
+  updateProgress();
+}
+
+// ============================================================
+// DATA EXPORT
+// ============================================================
+function exportData() {
+  return {
+    version: 'v5',
+    pid: S.pid,
+    condition: S.condition,
+    scenario_order: S.order.map(i=>SCENARIOS[i].id),
+    start_time: new Date(S.t0).toISOString(),
+    end_time: new Date(Date.now()).toISOString(),
+    duration_sec: Math.round((Date.now()-S.t0)/1000),
+    has_experience: S.hasExperience,
+    comp_attempts: S.compAttempts,
+    attn_check: S.attn_check,
+    attn_passed: S.attn_passed,
+    imc_target_scenario: SCENARIOS[S.order[S.imcTarget]].id,
+    imc_passed: S.imcPassed,
+    responses: S.responses,
+    battery: S.battery,
+    demographics: S.demo,
+  };
+}
+
+const DATA_ENDPOINT = ''; // Google Apps Script URL
+
+async function submitData(data) {
+  console.log('=== INVESTSIM v5 STUDY 2 DATA ===');
+  console.log(JSON.stringify(data, null, 2));
+  if (!DATA_ENDPOINT) return;
+  try {
+    await fetch(DATA_ENDPOINT, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(data),
+    });
+  } catch(e) {
+    try { navigator.sendBeacon(DATA_ENDPOINT, new Blob([JSON.stringify(data)],{type:'text/plain'})); }
+    catch(e2) { console.error('Submit failed:', e2); }
+  }
+}
+
+function downloadData() {
+  const d = exportData();
+  const blob = new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url;
+  a.download=`investsim_${S.pid}_${Date.now()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', () => {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('condition')) S.condition = p.get('condition');
+  showConsent();
+});
+
+// Prevent back
+history.pushState(null,null,location.href);
+window.addEventListener('popstate', ()=>history.pushState(null,null,location.href));
+window.addEventListener('beforeunload', e => {
+  if (S.idx>0 && S.idx<6) { e.preventDefault(); e.returnValue=''; }
+});
+</script>
+</body>
+</html>
