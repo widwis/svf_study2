@@ -773,10 +773,11 @@ function showPhase3() {
         Other investor: <strong>${fmt(s.other)}</strong></div>
     </div>
 
-    <hr class="divider">
+    <hr class="divider" style="margin:20px 0;">
 
     <!-- Task 1: Investment Retention -->
-    <h3>Investment Retention</h3>
+    <h3 style="background:#f0f4f8;padding:10px 14px;border-radius:6px;margin-bottom:8px;">
+      Investment Retention</h3>
     <p>How likely are you to <strong>continue investing in this fund</strong> for the next period?</p>
     <div class="slider-wrap">
       <div class="slider-labels">
@@ -809,21 +810,6 @@ function showPhase3() {
       ${mkLikert('share_intent',1,7)}
     </div>
 
-    <hr class="divider">
-
-    <!-- Reason (specific to retention) -->
-    <div class="likert-wrap">
-      <p class="likert-question">What is the main reason for your fund retention decision above?</p>
-      <button class="btn-choice" onclick="pickReason(this,'satisfied')">
-        I'm satisfied with this fund's performance</button>
-      <button class="btn-choice" onclick="pickReason(this,'comparison')">
-        The other investor's result made me reconsider</button>
-      <button class="btn-choice" onclick="pickReason(this,'market')">
-        General market conditions</button>
-      <button class="btn-choice" onclick="pickReason(this,'no_reason')">
-        No particular reason</button>
-    </div>
-
     <div id="p3Err" class="error-msg">Please answer all questions before continuing.</div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="submitP3()">
@@ -837,15 +823,9 @@ function updateRetain() {
   document.getElementById('retainDisp').innerHTML = `<strong>${v}</strong> / 100`;
 }
 
-function pickReason(el,v) {
-  el.parentElement.querySelectorAll('.btn-choice').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  S.cur.reason = v;
-}
-
 function submitP3() {
   const c = S.cur;
-  if (c.info_seek===undefined || c.share_intent===undefined || c.reason===undefined) {
+  if (c.info_seek===undefined || c.share_intent===undefined) {
     document.getElementById('p3Err').classList.add('visible'); return;
   }
   c.retention = parseInt(document.getElementById('retainSlider').value);
@@ -1231,7 +1211,7 @@ function exportData() {
   };
 }
 
-const DATA_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwmKdyePKX8aIgahzYgvT4E5S3OS3EiwA_tnhjm80G4IV7WFwVp03RCvfvnzGS61j9VPQ/exec'; // Google Apps Script URL
+const DATA_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwQws4aSNz1G9VToMP4MjJ_Z_QGg8PIO7ef27VXweIa3T9oyV1iewjpKkS0Lw7YkOc25w/exec'; // Google Apps Script URL
 let _submitted = false;
 
 async function submitData(data) {
