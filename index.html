@@ -1169,31 +1169,38 @@ function showCompletion() {
   S.endTime = Date.now();
 
   const data = exportData();
-  submitData(data);
-
+  const totalMin = Math.round((S.endTime-S.t0)/60000);
+  const prolificUrl = CONFIG.PROLIFIC_URL;
+  
+  // Show "saving" state first — button hidden until data is sent
   render(`<div class="card">
-    <h1 class="text-center">Thank You!</h1>
-    <p class="text-center">Your responses have been recorded.</p>
-    <p class="text-center">Your payment will be processed through Prolific.</p>
-    <p class="text-muted text-center">Total time: ${Math.round((S.endTime-S.t0)/60000)} minutes</p>
-
-    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px;margin:20px 0;">
-      <p style="margin:0 0 8px 0;font-weight:700;text-align:center;">
-        Important: You must return to Prolific to complete your submission.</p>
-      <p style="margin:0;text-align:center;font-size:0.9rem;">
-        Click the button below to return to Prolific. Your submission will not count
-        until you do this.</p>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" style="font-size:1.1rem;padding:14px 32px;"
-        onclick="window.location.href='${CONFIG.PROLIFIC_URL}'">
-        Complete &amp; Return to Prolific</button>
-    </div>
-    <p class="text-muted text-center" style="margin-top:12px;">
-      If the button doesn't work, copy this code and paste it on Prolific: <strong>C18MFPO2</strong></p>
+    <h1 class="text-center">Saving your responses...</h1>
+    <p class="text-center">Please wait, do not close this page.</p>
   </div>`);
-  updateProgress();
+
+  // Submit data, then show completion page with Prolific button
+  submitData(data).then(() => {
+    render('<div class="card">' +
+      '<h1 class="text-center">Thank You!</h1>' +
+      '<p class="text-center">Your responses have been recorded.</p>' +
+      '<p class="text-center">Your payment will be processed through Prolific.</p>' +
+      '<p class="text-muted text-center">Total time: ' + totalMin + ' minutes</p>' +
+      '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px;margin:20px 0;">' +
+        '<p style="margin:0 0 8px 0;font-weight:700;text-align:center;">' +
+          'Important: You must return to Prolific to complete your submission.</p>' +
+        '<p style="margin:0;text-align:center;font-size:0.9rem;">' +
+          'Click the button below to return to Prolific. Your submission will not count until you do this.</p>' +
+      '</div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-primary" style="font-size:1.1rem;padding:14px 32px;" ' +
+          'onclick="window.location.href=\'' + prolificUrl + '\'">' +
+          'Complete &amp; Return to Prolific</button>' +
+      '</div>' +
+      '<p class="text-muted text-center" style="margin-top:12px;">' +
+        'If the button doesn\'t work, copy this code and paste it on Prolific: <strong>C18MFPO2</strong></p>' +
+    '</div>');
+    updateProgress();
+  });
 }
 
 // ============================================================
@@ -1233,24 +1240,31 @@ async function submitData(data) {
   console.log('=== INVESTSIM v5 STUDY 2 DATA ===');
   console.log(JSON.stringify(data, null, 2));
   if (!DATA_ENDPOINT || _submitted) return;
-  _submitted = true;
+  
   const payload = JSON.stringify(data);
   
-  // Strategy: Try fetch first (more reliable for cross-origin).
-  // Also fire sendBeacon as insurance. Server-side dedup prevents duplicates.
-  try {
-    await fetch(DATA_ENDPOINT, {
-      method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body: payload,
-    });
-  } catch(e) {
-    console.warn('Fetch failed, relying on sendBeacon:', e);
-  }
-  // Always also try sendBeacon as backup (works even if page is closing)
+  // Fire both fetch and sendBeacon simultaneously.
+  // no-cors is required for Apps Script (no preflight support).
+  // We can't verify delivery, so we send via both channels.
+  // Server-side dedup by submission_id prevents duplicates.
+  
+  const fetchPromise = fetch(DATA_ENDPOINT, {
+    method: 'POST', mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain'},
+    body: payload,
+  }).catch(e => console.warn('Fetch failed:', e));
+  
   try {
     navigator.sendBeacon(DATA_ENDPOINT, new Blob([payload], {type:'text/plain'}));
-  } catch(e2) { /* silent */ }
+  } catch(e) { /* silent */ }
+  
+  // Wait for fetch to complete (or timeout after 5s)
+  await Promise.race([
+    fetchPromise,
+    new Promise(r => setTimeout(r, 5000))
+  ]);
+  
+  _submitted = true;
 }
 
 function downloadData() {
