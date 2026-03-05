@@ -1234,22 +1234,23 @@ async function submitData(data) {
   console.log(JSON.stringify(data, null, 2));
   if (!DATA_ENDPOINT || _submitted) return;
   _submitted = true;
-  // Use sendBeacon for reliability (fires even if page is closing)
-  // Single method only to prevent duplicate submissions
+  const payload = JSON.stringify(data);
+  
+  // Strategy: Try fetch first (more reliable for cross-origin).
+  // Also fire sendBeacon as insurance. Server-side dedup prevents duplicates.
   try {
-    const sent = navigator.sendBeacon(DATA_ENDPOINT,
-      new Blob([JSON.stringify(data)], {type:'text/plain'}));
-    if (!sent) {
-      // Fallback to fetch only if sendBeacon fails
-      await fetch(DATA_ENDPOINT, {
-        method:'POST', mode:'no-cors',
-        headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify(data),
-      });
-    }
+    await fetch(DATA_ENDPOINT, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body: payload,
+    });
   } catch(e) {
-    console.error('Submit failed:', e);
+    console.warn('Fetch failed, relying on sendBeacon:', e);
   }
+  // Always also try sendBeacon as backup (works even if page is closing)
+  try {
+    navigator.sendBeacon(DATA_ENDPOINT, new Blob([payload], {type:'text/plain'}));
+  } catch(e2) { /* silent */ }
 }
 
 function downloadData() {
